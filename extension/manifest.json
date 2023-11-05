@@ -1,0 +1,11 @@
+{
+    "manifest_version": 3,
+    "name": "Reading List Manager",
+    "description": "A Chrome extension for managing a reading list.",
+    "version": "1.0",
+    "permissions": ["tabs", "storage"],
+    "action": {
+      "default_popup": "popup.html",
+      "default_title": "Manage Reading List"
+    }
+  }
