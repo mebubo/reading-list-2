@@ -22,12 +22,12 @@ export default async function handler(
   const pageData = bodyToRequestData(req.body)
   console.log(pageData)
 
-  const page = await prisma.page.findUnique({
+  const page = await prisma.page.upsert({
     where: {
       url: pageData.url
-    }
-  }) ?? await prisma.page.create({
-    data: {
+    },
+    update: {},
+    create: {
       url: pageData.url,
       title: pageData.title,
     }
