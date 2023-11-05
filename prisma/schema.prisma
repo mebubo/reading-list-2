@@ -9,3 +9,18 @@ datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
 }
+
+model Page {
+  id     Int     @id @default(autoincrement())
+  url    String  @unique
+  title  String?
+  saves  PageSaves[]
+}
+
+model PageSaves {
+  id        Int        @id @default(autoincrement())
+  savedAt   DateTime   @default(now())
+  saveType  String
+  page    Page    @relation(fields: [pageId], references: [id])
+  pageId  Int
+}
