@@ -19,6 +19,11 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ResponseData>
 ) {
+  if (req.method !== 'POST') {
+    res.status(200).json({ message: 'ok' })
+    return
+  }
+
   const pageData = bodyToRequestData(req.body)
   console.log(pageData)
 
