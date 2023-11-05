@@ -1,14 +1,19 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import type { NextApiRequest, NextApiResponse } from 'next'
 
-type RequestData = {
-  url: string,
-  title: string | undefined,
-  saveType: string,
-}
+import { z } from 'zod'
+
+const RequestData = z.object({
+  url: z.string(),
+  title: z.string().optional(),
+  saveType: z.enum(["manual", "visit"]),
+})
+
+type RequestData = z.infer<typeof RequestData>
 
 type ResponseData = {
   message: string,
+  details?: any
 }
 
 import { PrismaClient } from '@prisma/client'
@@ -19,12 +24,20 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ResponseData>
 ) {
+
   if (req.method !== 'POST') {
     res.status(200).json({ message: 'ok' })
     return
   }
 
-  const pageData = bodyToRequestData(req.body)
+  const data = bodyToRequestData(req.body)
+  if (!data.success) {
+    res.status(400).json({ message: `Invalid request parameters`, details: data.error.flatten() })
+    return
+  }
+
+  const pageData = data.data
+
   console.log(pageData)
 
   const page = await prisma.page.upsert({
@@ -45,13 +58,9 @@ export default async function handler(
     }
   })
 
-  res.status(200).json({ message: 'hello' })
 }
 
-function bodyToRequestData(body: any): RequestData {
-  return {
-    url: body.url,
-    title: body.title,
-    saveType: body.saveType,
-  }
+function bodyToRequestData(body: any): z.SafeParseReturnType<RequestData, RequestData> {
+  const result = RequestData.safeParse(body)
+  return result
 }
