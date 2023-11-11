@@ -1,4 +1,3 @@
-// Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import type { NextApiRequest, NextApiResponse } from 'next'
 
 import { z } from 'zod'
@@ -25,8 +24,24 @@ export default async function handler(
   res: NextApiResponse<ResponseData>
 ) {
 
-  if (req.method !== 'POST') {
+  if (req.method === 'OPTIONS') {
     res.status(200).json({ message: 'ok' })
+    return
+  }
+
+  if (req.method === 'GET') {
+    const url = req.query.url
+    // return an error if url is undefined or is an array
+    if (url === undefined || Array.isArray(url)) {
+      res.status(400).json({ message: `Invalid request parameters`, details: `url is undefined or is an array` })
+      return
+    }
+    const page = await prisma.page.findUnique({
+      where: { url },
+      include: { saves: true }
+    })
+    const savesCount = page?.saves.length || 0
+    res.status(200).json({ message: "ok", details: { savesCount } })
     return
   }
 
@@ -57,6 +72,8 @@ export default async function handler(
       pageId: page.id
     }
   })
+
+  res.status(200).json({ message: "saved" })
 
 }
 
