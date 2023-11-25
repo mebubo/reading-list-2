@@ -15,12 +15,21 @@ model Page {
   url    String  @unique
   title  String?
   saves  PageSaves[]
+  highlights  PageHighlights[]
 }
 
 model PageSaves {
   id        Int        @id @default(autoincrement())
   savedAt   DateTime   @default(now())
   saveType  String
+  page    Page    @relation(fields: [pageId], references: [id])
+  pageId  Int
+}
+
+model PageHighlights {
+  id        Int        @id @default(autoincrement())
+  savedAt   DateTime   @default(now())
+  highlight String
   page    Page    @relation(fields: [pageId], references: [id])
   pageId  Int
 }

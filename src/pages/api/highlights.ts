@@ -5,7 +5,7 @@ import { z } from 'zod'
 const RequestData = z.object({
   url: z.string(),
   title: z.string().optional(),
-  saveType: z.enum(["manual", "visit"]),
+  highlight: z.any()
 })
 
 type RequestData = z.infer<typeof RequestData>
@@ -37,10 +37,9 @@ export default async function handler(
     }
     const page = await prisma.page.findUnique({
       where: { url },
-      include: { saves: true }
+      include: { highlights: true }
     })
-    const savesCount = page?.saves.length || 0
-    res.status(200).json({ message: "ok", details: { savesCount } })
+    res.status(200).json({ message: "ok", details: { highlights: page?.highlights } })
     return
   }
 
@@ -53,6 +52,7 @@ export default async function handler(
   const pageData = data.data
 
   console.log(pageData)
+  console.log(pageData.highlight.target)
 
   const page = await prisma.page.upsert({
     where: {
@@ -65,13 +65,12 @@ export default async function handler(
     }
   })
 
-  await prisma.pageSaves.create({
+  await prisma.pageHighlights.create({
     data: {
-      saveType: pageData.saveType,
-      pageId: page.id
+      pageId: page.id,
+      highlight: JSON.stringify(pageData.highlight)
     }
   })
-
   res.status(200).json({ message: "saved" })
 
 }
