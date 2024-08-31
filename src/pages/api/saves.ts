@@ -2,6 +2,11 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 
 import { z } from 'zod'
 
+import { drizzle } from 'drizzle-orm/libsql';
+import { createClient } from '@libsql/client';
+import * as schema from '../../../db/schema';
+import { eq } from 'drizzle-orm';
+
 const RequestData = z.object({
   url: z.string(),
   title: z.string().optional(),
@@ -15,9 +20,8 @@ type ResponseData = {
   details?: any
 }
 
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+const client = createClient({ url: process.env.DATABASE_URL || 'sqlite://prisma/dev.db' });
+const db = drizzle(client, { schema });
 
 export default async function handler(
   req: NextApiRequest,
@@ -35,44 +39,45 @@ export default async function handler(
       res.status(400).json({ message: `Invalid request parameters`, details: `url is undefined or is an array` })
       return
     }
-    const page = await prisma.page.findUnique({
-      where: { url },
-      include: { saves: true }
+    const page = await db.query.page.findFirst({
+      where: eq(schema.page.url, url),
+      with: { saves: true }
     })
     const savesCount = page?.saves.length || 0
     res.status(200).json({ message: "ok", details: { savesCount } })
     return
   }
 
-  const data = bodyToRequestData(req.body)
-  if (!data.success) {
-    res.status(400).json({ message: `Invalid request parameters`, details: data.error.flatten() })
-    return
-  }
+  if (req.method === 'POST') {
 
-  const pageData = data.data
-
-  console.log(pageData)
-
-  const page = await prisma.page.upsert({
-    where: {
-      url: pageData.url
-    },
-    update: {},
-    create: {
-      url: pageData.url,
-      title: pageData.title,
+    const data = bodyToRequestData(req.body)
+    if (!data.success) {
+      res.status(400).json({ message: `Invalid request parameters`, details: data.error.flatten() })
+      return
     }
-  })
 
-  await prisma.pageSaves.create({
-    data: {
+    const pageData = data.data
+
+    console.log(pageData)
+
+    await db
+      .insert(schema.page)
+      .values({
+        url: pageData.url,
+        title: pageData.title,
+      })
+      .onConflictDoNothing()
+
+    const page = await db.select().from(schema.page).where(eq(schema.page.url, pageData.url))
+    console.log("==============================", page)
+
+    await db.insert(schema.pageSaves).values({
       saveType: pageData.saveType,
-      pageId: page.id
-    }
-  })
+      pageId: page[0].id
+    })
 
-  res.status(200).json({ message: "saved" })
+    res.status(200).json({ message: "saved" })
+  }
 
 }
 
